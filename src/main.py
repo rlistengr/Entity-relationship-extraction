@@ -1,17 +1,12 @@
 import fool
 import pandas as pd
-from copy import copy
 import jieba
 import jieba.posseg as pseg
-import re
-import datetime
 from sklearn.feature_extraction.text import TfidfTransformer  
 from sklearn.feature_extraction.text import CountVectorizer  
 from pyltp import Segmentor
 from pyltp import Parser
 from pyltp import Postagger
-import networkx as nx
-import pylab
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import LabelEncoder
 import numpy as np
@@ -495,20 +490,26 @@ company_pair_df.to_csv('../submit/company_pair.csv', sep=',', header=True, index
 from py2neo import Node, Relationship, Graph
 
 graph = Graph(
-    "http://localhost:11011", 
+    "http://localhost:7474", 
     username="neo4j", 
-    password="person"
+    password="123456"
 )
 
+company_pair_df = pd.read_csv('company_pair.csv', encoding='utf-8')
+
+node_dict = {}
+
 for i,row in company_pair_df.iterrows():
-    a = Node('Company', name=row['company1'])
-    b = Node('Company', name=row['company2'])
+    if row['company1'] not in node_dict:
+        node_dict[row['company1']] = Node('Company', name=row['company1'])
+    if row['company2'] not in node_dict:
+        node_dict[row['company2']] = Node('Company', name=row['company2'])
     
     # 本次不区分投资方和被投资方
-    r = Relationship(a, 'INVEST', b)
+    r = Relationship(node_dict[row['company1']], 'INVEST', node_dict[row['company2']])
 
-    s = a | b | r
+    s = node_dict[row['company1']] | node_dict[row['company2']] | r
     graph.create(s)
-    r = Relationship(b, 'INVEST', a)
-    s = a | b | r
-    graph.create(s) 
+    #r = Relationship(node_dict[row['company2']], 'INVEST', node_dict[row['company1']])
+    #s = node_dict[row['company1']] | node_dict[row['company2']] | r
+    #graph.create(s) 
